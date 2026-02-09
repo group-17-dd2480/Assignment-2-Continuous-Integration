@@ -5,9 +5,21 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-
 // ci/ProcessCommandExecutor.java
+/**
+ * Executes a command in a workDir, in a subprocess using ProcessBuilder.
+ * 
+ */
 final class ProcessCommandExecutor implements CommandExecutor { 
+
+    /**
+     *  Runs a cmd in the given dir, and captures the result of the execution.
+      * @param command the cmd to execute
+      * @param workDir target dir to execute the cmd in
+      * @return the context of the execution
+      * @throws IOException 
+      * @throws InterruptedException
+     */
     @Override
     public ExecResult execute(List<String> command, Path workDir) throws IOException, InterruptedException {
         // use ProcessBuilder to execute the command.
