@@ -25,6 +25,30 @@ public class ContinuousIntegrationServer extends AbstractHandler
         baseRequest.setHandled(true);
 
         System.out.println(target);
+        try {
+            String token = System.getenv("GITHUB_TOKEN");
+
+            GithubStatusNotifier notifier =
+                    new GithubStatusNotifier(token);
+
+            String owner = "group-17-dd2480";
+            String repo  = "Assignment-2-Continuous-Integration";
+            String sha   = "c4f4b9e22d33d5de33339cb91cd21c1a0d007bdb";
+
+            notifier.setStatus(
+                    owner,
+                    repo,
+                    sha,
+                    "success",
+                    "P3: status set from CI server"
+            );
+
+            System.out.println("GitHub status sent for " + sha);
+
+        } catch (Exception e) {
+            System.err.println("Failed to send GitHub status");
+            e.printStackTrace();
+        }       
 
         // here you do all the continuous integration tasks
         // for example
