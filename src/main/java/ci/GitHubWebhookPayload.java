@@ -31,11 +31,19 @@ public class GitHubWebhookPayload {
         JSONObject ownerObj = repository.getJSONObject("owner");
         this.login = ownerObj.getString("login");
     }
-
+    /**
+     * Gets the full reference string (e.g., "refs/heads/main").
+     *
+     * @return The ref string.
+     */
     public String getRef() {
         return ref;
     }
-
+    /**
+     * Gets the branch name from the ref.
+     *
+     * @return The branch name or the full ref if not a head.
+     */
     public String getBranch() {
         if (ref != null && ref.startsWith("refs/heads/")) {
             return ref.substring("refs/heads/".length());
@@ -51,7 +59,11 @@ public class GitHubWebhookPayload {
     public String getAfter() {
         return after;
     }
-
+    /**
+     * Returns the HTTPS URL used to clone the repository.
+     *
+     * @return The clone URL.
+     */
     public String getCloneUrl() {
         return cloneUrl;
     }

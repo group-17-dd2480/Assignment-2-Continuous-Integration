@@ -7,6 +7,11 @@ package ci;
 public class NotifierFactory {
 
     public static Notifier create() {
+        /**
+     * Creates a Notifier based on environment variables.
+     *
+     * @return A GitHubNotifier if GITHUB_TOKEN is set, otherwise a MockNotifier.
+     */
         String token = System.getenv("GITHUB_TOKEN");
         if (token != null && !token.isBlank()) {
             return new GitHubNotifier(token);
