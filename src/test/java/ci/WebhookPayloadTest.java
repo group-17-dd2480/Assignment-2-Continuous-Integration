@@ -10,7 +10,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class WebhookPayloadTest {
 
-    private static final String VALID_PUSH_PAYLOAD = """
+    @Test
+    void parseValidPayload_extractsAllFields() {
+        String payload = """
             {
                 "ref": "refs/heads/main",
                 "before": "0000000000000000000000000000000000000000",
@@ -35,45 +37,46 @@ public class WebhookPayloadTest {
                 }
             }
             """;
+        GitHubWebhookPayload parsed = new GitHubWebhookPayload(payload);
 
-    @Test
-    void parseValidPayload_extractsAllFields() {
-        GitHubWebhookPayload payload = new GitHubWebhookPayload(VALID_PUSH_PAYLOAD);
-
-        assertEquals("refs/heads/main", payload.getRef());
-        assertEquals("main", payload.getBranch());
-        assertEquals("abc123def456789012345678901234567890abcd", payload.getAfter());
-        assertEquals("https://github.com/octocat/Hello-World.git", payload.getCloneUrl());
-        assertEquals("octocat", payload.getLogin());
-        assertEquals("Hello-World", payload.getRepositoryName());
+        assertEquals("refs/heads/main", parsed.getRef());
+        assertEquals("main", parsed.getBranch());
+        assertEquals("abc123def456789012345678901234567890abcd", parsed.getAfter());
+        assertEquals("https://github.com/octocat/Hello-World.git", parsed.getCloneUrl());
+        assertEquals("octocat", parsed.getLogin());
+        assertEquals("Hello-World", parsed.getRepositoryName());
     }
 
     @Test
     void parsePayload_withFeatureBranch_extractsBranchName() {
         String payload = """
-                {
-                    "ref": "refs/heads/feature/webhook-parser",
-                    "before": "0000000000000000000000000000000000000000",
-                    "after": "1234567890123456789012345678901234567890",
-                    "repository": {
-                        "id": 12345,
-                        "name": "test-repo",
-                        "full_name": "owner/test-repo",
-                        "clone_url": "https://github.com/owner/test-repo.git",
-                        "owner": {
-                            "login": "owner",
-                            "id": 1
-                        }
-                    },
-                    "sender": {
-                        "login": "owner",
+            {
+                "ref": "refs/heads/feature/something",
+                "before": "0000000000000000000000000000000000000000",
+                "after": "abc123def456789012345678901234567890abcd",
+                "repository": {
+                    "id": 1296269,
+                    "name": "Hello-World",
+                    "full_name": "octocat/Hello-World",
+                    "clone_url": "https://github.com/octocat/Hello-World.git",
+                    "owner": {
+                        "login": "octocat",
                         "id": 1
                     }
+                },
+                "pusher": {
+                    "name": "octocat",
+                    "email": "octocat@github.com"
+                },
+                "sender": {
+                    "login": "octocat",
+                    "id": 1
                 }
-                """;
+            }
+            """;
 
         GitHubWebhookPayload parsed = new GitHubWebhookPayload(payload);
-        assertEquals("feature/webhook-parser", parsed.getBranch());
+        assertEquals("feature/something", parsed.getBranch());
     }
 
     @Test
@@ -84,20 +87,29 @@ public class WebhookPayloadTest {
     @Test
     void parseMissingRequiredField_throwsException() {
         String missingAfter = """
-                {
-                    "ref": "refs/heads/main",
-                    "repository": {
-                        "id": 12345,
-                        "name": "my-repo",
-                        "full_name": "owner/my-repo",
-                        "clone_url": "https://github.com/owner/my-repo.git",
-                        "owner": {
-                            "login": "owner",
-                            "id": 1
-                        }
+            {
+                "ref": "refs/heads/main",
+                "before": "0000000000000000000000000000000000000000",
+                "repository": {
+                    "id": 1296269,
+                    "name": "Hello-World",
+                    "full_name": "octocat/Hello-World",
+                    "clone_url": "https://github.com/octocat/Hello-World.git",
+                    "owner": {
+                        "login": "octocat",
+                        "id": 1
                     }
+                },
+                "pusher": {
+                    "name": "octocat",
+                    "email": "octocat@github.com"
+                },
+                "sender": {
+                    "login": "octocat",
+                    "id": 1
                 }
-                """;
+            }
+            """;
 
         assertThrows(JSONException.class, () -> new GitHubWebhookPayload(missingAfter));
     }
