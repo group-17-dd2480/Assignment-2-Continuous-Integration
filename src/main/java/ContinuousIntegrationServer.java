@@ -1,4 +1,3 @@
-import ci.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -11,12 +10,17 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
-import ci.GitHubWebhookPayload;
-
 // For parsing payload and adjust by content type
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
+import ci.CiClone;
+import ci.CiCompile;
+import ci.CiTest;
+import ci.DefaultCommandExecutorFactory;
+import ci.Notifier;
+import ci.NotifierFactory;
+import ci.GitHubWebhookPayload;
 
 /**
  * Skeleton of a ContinuousIntegrationServer which acts as webhook
