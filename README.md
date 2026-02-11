@@ -31,28 +31,50 @@ To build and run this project, you will need:
 * **JSON (org.json)** 
 
   
-## Project Structure
+## Core Features
 
-The repository is organized as follows:
+## P1 – Compilation
 
-```text
-src/
-├── main/java/ci/
-│   ├── ContinuousIntegrationServer.java  # Main entry point & HTTP handling
-│   ├── GithubStatusNotifier.java         # Handles GitHub API notifications (P3)
-│   ├── CiCompile.java                    # Handles compilation logic (P1)
-│   ├── CiTest.java                       # Handles test execution logic (P2)
-│   ├── GitService.java                   # Handles cloning and checkout
-│   └── GitHubWebhookPayload.java         # JSON parsing for webhooks
-│
-└── test/java/ci/
-    ├── CiCompileTest.java
-    ├── CiTestTest.java
-    ├── GitServiceTest.java
-    ├── WebhookPayloadTest.java
-    └── NotifierTest.java
-```
+### How it works
+When the server receives a webhook from GitHub, it runs a compile step.
+The compile command is executed and the exit code and output are captured. If the exit code is 0, the compilation is considered successful. Otherwise, it is considered a failure.
+The compilation logic is implemented in the class CiCompile.
+We have unit tests in CiCompileTest that check:
+If compilation succeeds when commands return exit code 0, else compilation fails when commands return a non-zero exit code
 
+### Where it is implemented
+- `ci.ContinuousIntegrationServer` (wires the compile stage)
+- `ci.CiCompile` (executes compile commands and returns `CompileResult`)
+- `ci.CommandExecutor` / `ci.CommandExecutorFactory` 
+---
+
+## P2 – Testing
+
+### How it works
+After compilation, the server executes the project’s test commands. The output and exit code are captured. If all tests pass, the step is successful. If any test fails, the step is considered a failure.
+The test execution logic is implemented in the class CiTest.
+We have unit tests in CiTestTest that check:
+Tests succeed when commands return exit code 0
+Tests fail when commands return a non-zero exit code
+
+### Where it is implemented
+- `ci.CiTest` (executes test commands and returns `TestResult`)
+- `ci.CommandExecutor` / `ci.CommandExecutorFactory` (abstraction for running commands)
+---
+
+## P3 – Notification 
+
+### How it works
+After compilation and testing, the server sends a commit status to GitHub using the GitHub REST API.
+The status can be success, failure, pending, or error.
+This is implemented in the class GithubStatusNotifier.
+The GitHub Personal Access Token is read from the environment variable GITHUB_TOKEN.
+We have unit tests in NotifierTest that verify the notification logic using mock notifiers.
+When everything works, a green checkmark appears on the commit in GitHub with the context group-17-ci.
+
+### Where it is implemented
+- `GithubStatusNotifier` (builds and sends the HTTP request to GitHub)
+- `ContinuousIntegrationServer` (calls `GithubStatusNotifier.setStatus(...)`)
 
 ## How to Build and Run
 
@@ -123,6 +145,9 @@ To see what data is sent\
 * **Gabriel:**
 * **Daniel:**
 * **Sofia:**
+
+## SEMAT
+Our team is currently in the Collaborating state. The mission of building  the CI server is defined, and responsibilities are divided among members. Team members understand their individual roles and communicate regularly through discord, GitHub issues, pull requests. We are working toward a shared goal and supporting each other when problems arise, the person with more knowlage Gabriel has taken a larger technical responsibility and often supports other members with design decisions and problem solving. The main obstacles to reaching the Performing state are final integration of all features and ensuring that the webhook reliably triggers the full pipeline. Once these are done and consistently working, everything should be working. 
 
 ## License
 
