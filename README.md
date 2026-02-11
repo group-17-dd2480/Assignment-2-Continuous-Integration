@@ -105,7 +105,7 @@ Run this command after installation:\
 
 Start the server (`ContinuousIntegrationServer.java`) so that it is running at [http://localhost:8080/](http://localhost:8080/)\
 Then do this command:\
-`ngrok http 8080`\
+`ngrok http 8080`
 
 Then the server can be accessed here:\
 [https://sociogenic-toya-reelingly.ngrok-free.dev/](https://sociogenic-toya-reelingly.ngrok-free.dev/)
@@ -122,7 +122,7 @@ To see what data is sent\
 * **Laasya:** 
 * **Gabriel:**
 * **Daniel:**
-* **Sofia:**
+* **Sofia:** Implemented compilation webhook for P1
 
 ## License
 
