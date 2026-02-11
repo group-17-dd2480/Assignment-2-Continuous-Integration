@@ -1,4 +1,4 @@
-
+package ci;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -6,11 +6,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 // This is the helper class respons only for posting commit status to githib
-public class GithubStatusNotifier {
+public class GitHubNotifier implements Notifier {
     private final HttpClient client = HttpClient.newHttpClient(); // Used to send request to Github rest api
     private final String token;
 
-    public GithubStatusNotifier(String token) {
+    public GitHubNotifier(String token) {
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("Missing GITHUB_TOKEN environment variable");
         }
@@ -18,6 +18,7 @@ public class GithubStatusNotifier {
     }
 
     // Post commit status
+    @Override
     public void setStatus(String owner, String repo, String sha,
                           String state, String description) throws Exception {
 
