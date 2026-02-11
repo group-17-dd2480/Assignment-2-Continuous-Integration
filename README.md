@@ -148,6 +148,9 @@ To see what data is sent\
 [http://localhost:4040/](http://localhost:4040/)\
 [https://ngrok.com/docs/agent/web-inspection-interface?ref=getting-started](https://ngrok.com/docs/agent/web-inspection-interface?ref=getting-started)
 
+## P7 - Build History
+A list of the past builds can be accessed at: http://localhost:8080/builds
+
 ## Statement of Contributions
 
 **Olivia:**
@@ -156,6 +159,8 @@ To see what data is sent\
 - GithubNotifier
 
 **Laasya:** 
+- Build History
+- Documentation
 
 **Gabriel:**
 - Environment setup (mvn, junit) & project structure initialization
