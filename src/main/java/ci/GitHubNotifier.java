@@ -5,11 +5,19 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-// This is the helper class respons only for posting commit status to githib
+/**
+ * Implementation of the Notifier interface using the GitHub REST API.
+ * updates the commit status (success, failure, pending, error).
+ */
 public class GitHubNotifier implements Notifier {
     private final HttpClient client = HttpClient.newHttpClient(); // Used to send request to Github rest api
     private final String token;
-
+    /**
+     * Creates a new GitHubNotifier.
+     *
+     * @param token The GitHub Personal Access Token (PAT) with repo:status permissions.
+     * @throws IllegalArgumentException If the token is null or blank.
+     */
     public GitHubNotifier(String token) {
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("Missing GITHUB_TOKEN environment variable");
@@ -17,7 +25,15 @@ public class GitHubNotifier implements Notifier {
         this.token = token;
     }
 
-    // Post commit status
+    /**
+     * Sends a POST request to update the GitHub commit status.
+     * * @param owner       The GitHub account owner.
+     * @param repo        The repository name.
+     * @param sha         The commit SHA ID.
+     * @param state       The result (success, failure, or pending).
+     * @param description A short summary of the result.
+     * @throws Exception  If the HTTP request fails.
+     */
     @Override
     public void setStatus(String owner, String repo, String sha,
                           String state, String description) throws Exception {
