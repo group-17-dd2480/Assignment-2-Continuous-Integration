@@ -11,6 +11,13 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
+import ci.GitHubWebhookPayload;
+
+// For parsing payload and adjust by content type
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+
+
 /**
  * Skeleton of a ContinuousIntegrationServer which acts as webhook
  * See the Jetty documentation for API documentation of those classes.
@@ -44,8 +51,22 @@ public class ContinuousIntegrationServer extends AbstractHandler {
 
         System.out.println("Payload: " + payload.substring(0, Math.min(200, payload.length())));
 
+
+        // Adjust payload handling depending on content type
+        String contentType = request.getContentType();
+        String jsonBody;
+        if (contentType != null && contentType.contains("application/json")) {
+            jsonBody = payload;
+        } else {
+            // If not json assume it's url-encoded form data with a "payload" field containing the JSON
+            // E.g.
+            // payload=%XX%XXref%XX%XX%XXrefs%2Fheads%2Fmain%XX%XX%XX%XX%XXafter%XX%XX%XX%XX%XX%XXrepository%XX%XX%XX
+            String encoded = payload.startsWith("payload=") ? payload.substring("payload=".length()) : payload;
+            jsonBody = URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+        }
+
         // Parse webhook payload
-        GitHubWebhookPayload webhook = new GitHubWebhookPayload(payload);
+        GitHubWebhookPayload webhook = new GitHubWebhookPayload(jsonBody);
 
         String owner = webhook.getLogin();
         String repo = webhook.getRepositoryName();
