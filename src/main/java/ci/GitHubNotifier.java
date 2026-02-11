@@ -19,6 +19,7 @@ public class GitHubNotifier implements Notifier {
      * @throws IllegalArgumentException If the token is null or blank.
      */
     public GitHubNotifier(String token) {
+        // If no token we stop
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("Missing GITHUB_TOKEN environment variable");
         }
@@ -37,7 +38,7 @@ public class GitHubNotifier implements Notifier {
     @Override
     public void setStatus(String owner, String repo, String sha,
                           String state, String description) throws Exception {
-
+        // Create the URL based one repo owner, name comit
         String url = "https://api.github.com/repos/" + owner + "/" + repo + "/statuses/" + sha;
         
         // Json payload controls pass fail pending
@@ -49,12 +50,15 @@ public class GitHubNotifier implements Notifier {
         // Build the HTTP request 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
+                // Authentication, attach the token to the header
                 .header("Authorization", "token " + token)
+                // Content type, tell github we are sending json
                 .header("Accept", "application/vnd.github+json")
                 .header("User-Agent", "dd2480-mini-ci")
+                // Post to create/update status
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
-        // Send request and capture respone 
+        // Send request and wait for respone 
         HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
 
         if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
