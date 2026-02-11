@@ -1,115 +1,183 @@
-    import javax.servlet.http.HttpServletRequest;
-    import javax.servlet.http.HttpServletResponse;
-    import javax.servlet.ServletException;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-    import java.io.IOException;
-    import java.nio.file.FileSystems;
-    import java.nio.file.Path;
-    import java.util.List;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
 
-    import org.eclipse.jetty.server.Server;
-    import org.eclipse.jetty.server.Request;
-    import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.handler.AbstractHandler;
 
-    // import ci.App;
-    // import ci.CiCompile;
-    import ci.*;
+// For parsing payload and adjust by content type
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
+import ci.BuildHistory;
+import ci.CiClone;
+import ci.CiCompile;
+import ci.CiTest;
+import ci.DefaultCommandExecutorFactory;
+import ci.Notifier;
+import ci.NotifierFactory;
+import ci.GitHubWebhookPayload;
+
+/**
+ * The main code for the Continuous Integration Server.
+ * This class sets up a Jetty HTTP server to listen for GitHub webhooks.
+ * It handles the CI pipeline receiving the request, cloning the repository,
+ * compiling the code, running tests, and notifying GitHub of the results.
+ */
+public class ContinuousIntegrationServer extends AbstractHandler {
+    
+    
+    private final BuildHistory history;
+    public ContinuousIntegrationServer() throws IOException {
+        history = new BuildHistory(Path.of("ci-build-history"));
+    }
+		
     /**
-     * Skeleton of a ContinuousIntegrationServer which acts as webhook
-     * See the Jetty documentation for API documentation of those classes.
+     * Handle HTTP requests from GitHub
+     * This method parses the JSON payload to extract commit information, triggers the
+     * clone-compile-test pipeline, and reports the status back to GitHub via the Notifier.
+     * @param target      The request (URI).
+     * @param baseRequest The original base request object.
+     * @param request     The request object (HttpServletRequest).
+     * @param response    The response object (HttpServletResponse).
+     * @throws IOException      If an input or output exception occurs.
+     * @throws ServletException If a servlet exception occurs.
      */
-    public class ContinuousIntegrationServer extends AbstractHandler {
+    public void handle(String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException {
+        response.setContentType("text/html;charset=utf-8");
+        response.setStatus(HttpServletResponse.SC_OK);
+        baseRequest.setHandled(true);
 
-        private final BuildHistory history;
-        public ContinuousIntegrationServer() throws IOException {
-            history = new BuildHistory(Path.of("ci-build-history"));
-        }
+        System.out.println(target);
 
-        public void handle(String target,
-                Request baseRequest,
-                HttpServletRequest request,
-                HttpServletResponse response)
-                throws IOException, ServletException {
-            response.setContentType("text/html;charset=utf-8");
-            response.setStatus(HttpServletResponse.SC_OK);
-            baseRequest.setHandled(true);
-
-            //display build list or single build based on the target URL
-            if (target.equals("/builds")) {
+        //display build list or single build based on the target URL
+        if (target.equals("/builds")) {
             showBuildList(response);
             return;
-            } else if (target.startsWith("/builds/")) {
+        } else if (target.startsWith("/builds/")) {
             showSingleBuild(target, response);
             return;
             }
 
-            String owner = "group-17-dd2480";
-            String repo  = "Assignment-2-Continuous-Integration";
-            String sha   = "c4f4b9e22d33d5de33339cb91cd21c1a0d007bdb";
-            System.out.println(target);
-            try {
-                Notifier notifier =
-                        NotifierFactory.create(); 
+        // Read the webhook payload
+        StringBuilder payloadBuilder = new StringBuilder();
+        BufferedReader bufferedReader = request.getReader();
+        String line = bufferedReader.readLine();
+        while (line != null) {
+            payloadBuilder.append(line);
+            line = bufferedReader.readLine();
+        }
+        String payload = payloadBuilder.toString();
 
-                boolean ok = true;
-
-                notifier.setStatus(
-                        owner,
-                        repo,
-                        sha,
-                        ok ? "success" : "failure",
-                        ok ? "Build & tests passed" : "Build or tests failed"
-                );
-
-                System.out.println("GitHub status sent for " + sha);
-
-            } catch (Exception e) {
-                System.err.println("Failed to send GitHub status");
-                e.printStackTrace();
-            }       
-
-            // here you do all the continuous integration tasks
-            // for example
-            // 1st clone your repository
-            // 2nd compile the code
-
-            // continuous integration tasks
-            // todo: check in which branch push happened, check commit message to avoid recursion
-            // todo: clone that branch to local
-            // done: compile the code
-            // todo: push to branch, add unique commit message to avoid recursion
-            // todo: delete local clone
-
-            List<String> compileCommands = List.of("mvn", "clean", "compile");
-            Path sourceDir = FileSystems.getDefault().getPath("");
-            CiCompile ciCompile = new CiCompile(new MockCommandExecutorFactory(), compileCommands, sourceDir);// todo change to real program, instead of mockcommand
-            try {
-                CiCompile.CompileResult result = ciCompile.compile();
-                if (result.isSuccess()) {
-                    response.getWriter().println("Compilation successful<br><hr><p style=\"margin-left: 2em;\">");
-                    response.getWriter().println(result.getOutput().replace("\n", "<br>"));
-                    response.getWriter().println("</p><hr>");
-                }
-            } catch (IOException | InterruptedException e) {
-                response.getWriter().println("Exception in compilation: " + e + "<br>");
-            }
-
-
-            //create a build entry when a POST request is made
-            if(request.getMethod().equalsIgnoreCase("POST")){
-                try{
-                    String buildId = history.createBuild(sha, "success", "compile log", "test log");
-                    response.getWriter().println("Created build: " + buildId + "<br>");
-                } catch (IOException e){
-                    response.getWriter().println("Failed to create build: " + e + "<br>");
-                }
-            }
-            
-            response.getWriter().println("CI job done");
+        if (payload.isEmpty()) {
+            return;
         }
 
-        private void showBuildList(HttpServletResponse response) throws IOException {
+        System.out.println("Payload: " + payload.substring(0, Math.min(200, payload.length())));
+
+
+        // Adjust payload handling depending on content type
+        String contentType = request.getContentType();
+        String jsonBody;
+        if (contentType != null && contentType.contains("application/json")) {
+            jsonBody = payload;
+        } else {
+            // If not json assume it's url-encoded form data with a "payload" field containing the JSON
+            // E.g.
+            // payload=%XX%XXref%XX%XX%XXrefs%2Fheads%2Fmain%XX%XX%XX%XX%XXafter%XX%XX%XX%XX%XX%XXrepository%XX%XX%XX
+            String encoded = payload.startsWith("payload=") ? payload.substring("payload=".length()) : payload;
+            jsonBody = URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+        }
+
+        // Parse webhook payload
+        GitHubWebhookPayload webhook = new GitHubWebhookPayload(jsonBody);
+
+        String owner = webhook.getLogin();
+        String repo = webhook.getRepositoryName();
+        String sha = webhook.getAfter();
+        String branch = webhook.getBranch();
+        String cloneUrl = webhook.getCloneUrl();
+        Boolean success = true;
+
+        Notifier notifier = NotifierFactory.create();
+        CiClone ciClone = new CiClone();
+        Path cloneLocation = null;
+
+        try {
+            // Set status to pending
+            notifier.setStatus(owner, repo, sha, "pending", "Build started");
+
+            // Clone repository
+            CiClone.CloneResult cloneResult = ciClone.gitCloneAndCheckout(cloneUrl, branch, sha);
+            if (!cloneResult.isSuccess()) {
+                notifier.setStatus(owner, repo, sha, "failure", "Clone failed");
+                response.getWriter().println("Clone failed: " + cloneResult.getOutput());
+                return;
+            }
+            cloneLocation = cloneResult.getClonedDirectory();
+
+            // Compile
+            List<String> compileCommands = List.of("mvn", "compile", "-q");
+            CiCompile ciCompile = new CiCompile(new DefaultCommandExecutorFactory(), compileCommands, cloneLocation);
+            CiCompile.CompileResult compileResult = ciCompile.compile();
+
+            if (!compileResult.isSuccess()) {
+                success = false;
+                history.createBuild(sha, "failure", compileResult.getOutput(), "Tests not run, compilation failed");
+                notifier.setStatus(owner, repo, sha, "failure", "Compilation failed");
+                response.getWriter().println("Compilation failed: " + compileResult.getOutput());
+                return;
+            }
+
+            // Run tests
+            List<String> testCommands = List.of("mvn", "test", "-q");
+            CiTest ciTest = new CiTest(new DefaultCommandExecutorFactory(), testCommands, cloneLocation);
+            CiTest.TestResult testResult = ciTest.runTests();
+
+            if (!testResult.isSuccess()) {
+                success = false;
+                history.createBuild(sha, "failure", compileResult.getOutput(), testResult.getOutput());
+                notifier.setStatus(owner, repo, sha, "failure", "Tests failed");
+                response.getWriter().println("Tests failed: " + testResult.getOutput());
+                return;
+            }
+
+            // Set success status
+            notifier.setStatus(owner, repo, sha, "success", "Build and tests passed");
+            response.getWriter().println("Build successful, all tests passed :D");
+            if(request.getMethod().equalsIgnoreCase("POST")) {
+                history.createBuild(sha, "success", compileResult.getOutput(), testResult.getOutput());
+            }
+
+
+        } catch (Exception e) {
+            System.err.println("Failed to send GitHub status");
+            e.printStackTrace();
+            try {
+                notifier.setStatus(owner, repo, sha, "error", "CI error: " + e.getMessage());
+            } catch (Exception notifyError) {
+                System.err.println("Failed to send error status: " + notifyError.getMessage());
+            }
+            response.getWriter().println("CI error: " + e.getMessage());
+        } finally {
+            // Always cleanup
+            if (cloneLocation != null) {
+                ciClone.cleanup(cloneLocation);
+            }
+        }
+    }
+
+    private void showBuildList(HttpServletResponse response) throws IOException {
         response.getWriter().println("<h1>Builds</h1>");
         for (String build : history.listBuilds()) {
             response.getWriter().println(
@@ -117,33 +185,21 @@
         }
     }
 
-        private void showSingleBuild(String target, HttpServletResponse response) throws IOException {
+    private void showSingleBuild(String target, HttpServletResponse response) throws IOException {
             String buildId = target.substring("/builds/".length());
             response.getWriter().println("<pre>");
             response.getWriter().println(history.getBuild(buildId));
             response.getWriter().println("</pre>");
         }
 
-        // used to start the CI server in command line
-        public static void main(String[] args) throws Exception {
-            Server server = new Server(8080);
-            server.setHandler(new ContinuousIntegrationServer());
-            server.start();
-            server.join();
-        }
+    /**
+     * Begin the JEtty server on port 8080.
+     * @throws Exception If the server fails to start.
+     */
+    public static void main(String[] args) throws Exception {
+        Server server = new Server(8080);
+        server.setHandler(new ContinuousIntegrationServer());
+        server.start();
+        server.join();
     }
-
-    class SuccessFullMockCommandExecutor implements CommandExecutor {
-        @Override
-        public ExecResult execute(List<String> command, Path workDir) throws IOException, InterruptedException {
-            // we just return a successful result with some dummy output.
-            return new ExecResult(0, "The program output");
-        }
-    }
-
-    class MockCommandExecutorFactory implements CommandExecutorFactory {
-        @Override
-        public CommandExecutor create() {
-            return new SuccessFullMockCommandExecutor();
-        }
-    }
+}
