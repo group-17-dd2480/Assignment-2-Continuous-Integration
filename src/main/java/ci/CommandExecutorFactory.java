@@ -1,7 +1,6 @@
 package ci;
 
 // ci/CommandExecutorFactory.java
-interface CommandExecutorFactory {
+public interface CommandExecutorFactory {
   CommandExecutor create();
 }
-
