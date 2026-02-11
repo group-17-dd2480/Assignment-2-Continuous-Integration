@@ -55,8 +55,7 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         System.out.println(payload.toString());
 
         try {
-            Notifier notifier =
-                    NotifierFactory.create();
+            Notifier notifier = NotifierFactory.create();
 
             String owner = "group-17-dd2480";
             String repo = "Assignment-2-Continuous-Integration";
@@ -69,8 +68,7 @@ public class ContinuousIntegrationServer extends AbstractHandler {
                     repo,
                     sha,
                     ok ? "success" : "failure",
-                    ok ? "Build & tests passed" : "Build or tests failed"
-            );
+                    ok ? "Build & tests passed" : "Build or tests failed");
 
             System.out.println("GitHub status sent for " + sha);
             response.getWriter().println("GitHub status sent<br>");
