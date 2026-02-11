@@ -69,14 +69,14 @@ Tests fail when commands return a non-zero exit code
 ### How it works
 After compilation and testing, the server sends a commit status to GitHub using the GitHub REST API.
 The status can be success, failure, pending, or error.
-This is implemented in the class GithubStatusNotifier.
+This is implemented in the class GitHubNotifier.
 The GitHub Personal Access Token is read from the environment variable GITHUB_TOKEN.
 We have unit tests in NotifierTest that verify the notification logic using mock notifiers.
 When everything works, a green checkmark appears on the commit in GitHub with the context group-17-ci.
 
 ### Where it is implemented
-- `GithubStatusNotifier` (builds and sends the HTTP request to GitHub)
-- `ContinuousIntegrationServer` (calls `GithubStatusNotifier.setStatus(...)`)
+- `GitHubNotifier` (builds and sends the HTTP request to GitHub)
+- `ContinuousIntegrationServer` (calls `GitHubNotifier.setStatus(...)`)
 
 ## How to Build and Run
 
@@ -105,7 +105,7 @@ export GITHUB_TOKEN=your_token_here
 To run the server locally:
 ```bash
 mvn dependency:copy-dependencies -DincludeScope=runtime
-java -cp "target/classes:target/dependency/*" ci.ContinuousIntegrationServer
+java -cp "target/classes:target/dependency/*" ContinuousIntegrationServer
 ```
 The server will start at: http://localhost:8080
 
