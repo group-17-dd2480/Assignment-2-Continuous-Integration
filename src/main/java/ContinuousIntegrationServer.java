@@ -1,11 +1,8 @@
-import ci.Notifier;
-import ci.NotifierFactory;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -13,9 +10,17 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
-// import ci.App;
-// import ci.CiCompile;
-import ci.*;
+// For parsing payload and adjust by content type
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+
+import ci.CiClone;
+import ci.CiCompile;
+import ci.CiTest;
+import ci.DefaultCommandExecutorFactory;
+import ci.Notifier;
+import ci.NotifierFactory;
+import ci.GitHubWebhookPayload;
 
 /**
  * The main code for the Continuous Integration Server.
@@ -39,64 +44,110 @@ public class ContinuousIntegrationServer extends AbstractHandler {
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-            throws IOException, ServletException {
+            throws IOException {
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
         baseRequest.setHandled(true);
 
         System.out.println(target);
+
+        // Read the webhook payload
+        StringBuilder payloadBuilder = new StringBuilder();
+        BufferedReader bufferedReader = request.getReader();
+        String line = bufferedReader.readLine();
+        while (line != null) {
+            payloadBuilder.append(line);
+            line = bufferedReader.readLine();
+        }
+        String payload = payloadBuilder.toString();
+
+        if (payload.isEmpty()) {
+            return;
+        }
+
+        System.out.println("Payload: " + payload.substring(0, Math.min(200, payload.length())));
+
+
+        // Adjust payload handling depending on content type
+        String contentType = request.getContentType();
+        String jsonBody;
+        if (contentType != null && contentType.contains("application/json")) {
+            jsonBody = payload;
+        } else {
+            // If not json assume it's url-encoded form data with a "payload" field containing the JSON
+            // E.g.
+            // payload=%XX%XXref%XX%XX%XXrefs%2Fheads%2Fmain%XX%XX%XX%XX%XXafter%XX%XX%XX%XX%XX%XXrepository%XX%XX%XX
+            String encoded = payload.startsWith("payload=") ? payload.substring("payload=".length()) : payload;
+            jsonBody = URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+        }
+
+        // Parse webhook payload
+        GitHubWebhookPayload webhook = new GitHubWebhookPayload(jsonBody);
+
+        String owner = webhook.getLogin();
+        String repo = webhook.getRepositoryName();
+        String sha = webhook.getAfter();
+        String branch = webhook.getBranch();
+        String cloneUrl = webhook.getCloneUrl();
+
+        Notifier notifier = NotifierFactory.create();
+        CiClone ciClone = new CiClone();
+        Path cloneLocation = null;
+
         try {
-            Notifier notifier =
-                    NotifierFactory.create();
+            // Set status to pending
+            notifier.setStatus(owner, repo, sha, "pending", "Build started");
 
-            String owner = "group-17-dd2480";
-            String repo  = "Assignment-2-Continuous-Integration";
-            String sha   = "c4f4b9e22d33d5de33339cb91cd21c1a0d007bdb";
+            // Clone repository
+            CiClone.CloneResult cloneResult = ciClone.gitCloneAndCheckout(cloneUrl, branch, sha);
+            if (!cloneResult.isSuccess()) {
+                notifier.setStatus(owner, repo, sha, "failure", "Clone failed");
+                response.getWriter().println("Clone failed: " + cloneResult.getOutput());
+                return;
+            }
+            cloneLocation = cloneResult.getClonedDirectory();
 
-            boolean ok = true;
+            // Compile
+            List<String> compileCommands = List.of("mvn", "compile", "-q");
+            CiCompile ciCompile = new CiCompile(new DefaultCommandExecutorFactory(), compileCommands, cloneLocation);
+            CiCompile.CompileResult compileResult = ciCompile.compile();
 
-            notifier.setStatus(
-                    owner,
-                    repo,
-                    sha,
-                    ok ? "success" : "failure",
-                    ok ? "Build & tests passed" : "Build or tests failed"
-            );
+            if (!compileResult.isSuccess()) {
+                notifier.setStatus(owner, repo, sha, "failure", "Compilation failed");
+                response.getWriter().println("Compilation failed: " + compileResult.getOutput());
+                return;
+            }
 
-            System.out.println("GitHub status sent for " + sha);
+            // Run tests
+            List<String> testCommands = List.of("mvn", "test", "-q");
+            CiTest ciTest = new CiTest(new DefaultCommandExecutorFactory(), testCommands, cloneLocation);
+            CiTest.TestResult testResult = ciTest.runTests();
+
+            if (!testResult.isSuccess()) {
+                notifier.setStatus(owner, repo, sha, "failure", "Tests failed");
+                response.getWriter().println("Tests failed: " + testResult.getOutput());
+                return;
+            }
+
+            // Set success status
+            notifier.setStatus(owner, repo, sha, "success", "Build and tests passed");
+            response.getWriter().println("Build successful, all tests passed :D");
 
         } catch (Exception e) {
             System.err.println("Failed to send GitHub status");
             e.printStackTrace();
-        }       
-
-        // here you do all the continuous integration tasks
-        // for example
-        // 1st clone your repository
-        // 2nd compile the code
-
-        // continuous integration tasks
-        // todo: check in which branch push happened, check commit message to avoid recursion
-        // todo: clone that branch to local
-        // done: compile the code
-        // todo: push to branch, add unique commit message to avoid recursion
-        // todo: delete local clone
-
-        List<String> compileCommands = List.of("mvn", "clean", "compile");
-        Path sourceDir = FileSystems.getDefault().getPath("");
-        CiCompile ciCompile = new CiCompile(new MockCommandExecutorFactory(), compileCommands, sourceDir);// todo change to real program, instead of mockcommand
-        try {
-            CiCompile.CompileResult result = ciCompile.compile();
-            if (result.isSuccess()) {
-                response.getWriter().println("Compilation successful<br><hr><p style=\"margin-left: 2em;\">");
-                response.getWriter().println(result.getOutput().replace("\n", "<br>"));
-                response.getWriter().println("</p><hr>");
+            try {
+                notifier.setStatus(owner, repo, sha, "error", "CI error: " + e.getMessage());
+            } catch (Exception notifyError) {
+                System.err.println("Failed to send error status: " + notifyError.getMessage());
             }
-        } catch (IOException | InterruptedException e) {
-            response.getWriter().println("Exception in compilation: " + e + "<br>");
+            response.getWriter().println("CI error: " + e.getMessage());
+        } finally {
+            // Always cleanup
+            if (cloneLocation != null) {
+                ciClone.cleanup(cloneLocation);
+            }
         }
-
-        response.getWriter().println("CI job done");
     }
 
     /**
@@ -111,17 +162,3 @@ public class ContinuousIntegrationServer extends AbstractHandler {
     }
 }
 
-class SuccessFullMockCommandExecutor implements CommandExecutor {
-    @Override
-    public ExecResult execute(List<String> command, Path workDir) throws IOException, InterruptedException {
-        // we just return a successful result with some dummy output.
-        return new ExecResult(0, "The program output");
-    }
-}
-
-class MockCommandExecutorFactory implements CommandExecutorFactory {
-    @Override
-    public CommandExecutor create() {
-        return new SuccessFullMockCommandExecutor();
-    }
-}
