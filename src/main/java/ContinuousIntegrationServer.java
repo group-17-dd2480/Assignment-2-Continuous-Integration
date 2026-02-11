@@ -18,10 +18,23 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import ci.*;
 
 /**
- * Skeleton of a ContinuousIntegrationServer which acts as webhook
- * See the Jetty documentation for API documentation of those classes.
+ * The main code for the Continuous Integration Server.
+ * This class sets up a Jetty HTTP server to listen for GitHub webhooks.
+ * It handles the CI pipeline receiving the request, cloning the repository,
+ * compiling the code, running tests, and notifying GitHub of the results.
  */
 public class ContinuousIntegrationServer extends AbstractHandler {
+    /**
+     * Handle HTTP requests from GitHub
+     * This method parses the JSON payload to extract commit information, triggers the
+     * clone-compile-test pipeline, and reports the status back to GitHub via the Notifier.
+     * @param target      The request (URI).
+     * @param baseRequest The original base request object.
+     * @param request     The request object (HttpServletRequest).
+     * @param response    The response object (HttpServletResponse).
+     * @throws IOException      If an input or output exception occurs.
+     * @throws ServletException If a servlet exception occurs.
+     */
     public void handle(String target,
             Request baseRequest,
             HttpServletRequest request,
@@ -86,7 +99,10 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         response.getWriter().println("CI job done");
     }
 
-    // used to start the CI server in command line
+    /**
+     * Begin the JEtty server on port 8080.
+     * @throws Exception If the server fails to start.
+     */
     public static void main(String[] args) throws Exception {
         Server server = new Server(8080);
         server.setHandler(new ContinuousIntegrationServer());
