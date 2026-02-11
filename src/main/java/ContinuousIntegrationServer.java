@@ -1,3 +1,5 @@
+import ci.Notifier;
+import ci.NotifierFactory;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
@@ -26,10 +28,8 @@ public class ContinuousIntegrationServer extends AbstractHandler
 
         System.out.println(target);
         try {
-            String token = System.getenv("GITHUB_TOKEN");
-
-            GithubStatusNotifier notifier =
-                    new GithubStatusNotifier(token);
+            Notifier notifier =
+                    NotifierFactory.create();
 
             String owner = "group-17-dd2480";
             String repo  = "Assignment-2-Continuous-Integration";
