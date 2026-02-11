@@ -25,12 +25,14 @@ To build and run this project, you will need:
 
 * **Java:** Version 17
 * **Maven:** Version 3.6+
-*  **Jetty** 
-* **JUnit 5**
-* **GitHub REST API** 
-* **JSON (org.json)** 
+* **Jetty:** `org.eclipse.jetty.aggregate:jetty-all:7.0.2.v20100331`
+* **Servlet-api:** `javax.servlet:servlet-api:2.5`
+* **JUnit 5:** `org.junit.jupiter:junit-jupiter:5.10.2`
+* **JSON:** `org.json:json:20251224`
 
-  
+### External dependency
+* **GitHub REST API**  (used for sending commit status notifications + receiving webhooks)
+
 ## Core Features
 
 ## P1 – Compilation
