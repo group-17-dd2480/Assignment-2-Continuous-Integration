@@ -38,7 +38,6 @@ public class ContinuousIntegrationServer extends AbstractHandler {
      * @param request     The request object (HttpServletRequest).
      * @param response    The response object (HttpServletResponse).
      * @throws IOException      If an input or output exception occurs.
-     * @throws ServletException If a servlet exception occurs.
      */
     public void handle(String target,
             Request baseRequest,

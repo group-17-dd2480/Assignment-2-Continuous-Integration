@@ -25,12 +25,14 @@ To build and run this project, you will need:
 
 * **Java:** Version 17
 * **Maven:** Version 3.6+
-*  **Jetty** 
-* **JUnit 5**
-* **GitHub REST API** 
-* **JSON (org.json)** 
+* **Jetty:** `org.eclipse.jetty.aggregate:jetty-all:7.0.2.v20100331`
+* **Servlet-api:** `javax.servlet:servlet-api:2.5`
+* **JUnit 5:** `org.junit.jupiter:junit-jupiter:5.10.2`
+* **JSON:** `org.json:json:20251224`
 
-  
+### External dependency
+* **GitHub REST API**  (used for sending commit status notifications + receiving webhooks)
+
 ## Core Features
 
 ## P1 – Compilation
@@ -67,14 +69,14 @@ Tests fail when commands return a non-zero exit code
 ### How it works
 After compilation and testing, the server sends a commit status to GitHub using the GitHub REST API.
 The status can be success, failure, pending, or error.
-This is implemented in the class GithubStatusNotifier.
+This is implemented in the class GitHubNotifier.
 The GitHub Personal Access Token is read from the environment variable GITHUB_TOKEN.
 We have unit tests in NotifierTest that verify the notification logic using mock notifiers.
 When everything works, a green checkmark appears on the commit in GitHub with the context group-17-ci.
 
 ### Where it is implemented
-- `GithubStatusNotifier` (builds and sends the HTTP request to GitHub)
-- `ContinuousIntegrationServer` (calls `GithubStatusNotifier.setStatus(...)`)
+- `GitHubNotifier` (builds and sends the HTTP request to GitHub)
+- `ContinuousIntegrationServer` (calls `GitHubNotifier.setStatus(...)`)
 
 ## How to Build and Run
 
@@ -103,9 +105,17 @@ export GITHUB_TOKEN=your_token_here
 To run the server locally:
 ```bash
 mvn dependency:copy-dependencies -DincludeScope=runtime
-java -cp "target/classes:target/dependency/*" ci.ContinuousIntegrationServer
+java -cp "target/classes:target/dependency/*" ContinuousIntegrationServer
 ```
 The server will start at: http://localhost:8080
+
+## Generate Javadoc
+To generate the API documentation, run:
+```bash
+mvn javadoc:javadoc
+```
+The generated HTML can be found at:
+`target/reports/apidocs/index.html`
 
 Install ngrok:\
 Windows:\
@@ -140,11 +150,29 @@ To see what data is sent\
 
 ## Statement of Contributions
 
-* **Olivia:** Implemented GitHub commit status notification P3 and wrote the documentation.
-* **Laasya:** 
-* **Gabriel:**
-* **Daniel:**
-* **Sofia:**
+**Olivia:**
+- Implemented GitHub commit status notification P3
+- Wrote the documentation.
+- GithubNotifier
+
+**Laasya:** 
+
+**Gabriel:**
+- Environment setup (mvn, junit) & project structure initialization
+- Build pipeline
+- Test pipeline
+- Javadoc
+- Docs
+
+**Daniel:**
+- Webhook parsing + tests
+- Repo cloning
+- Notification
+- Ci integration
+
+**Sofia:**
+- Documentation
+- Refactoring
 
 ## SEMAT
 Our team is currently in the Collaborating state. The mission of building  the CI server is defined, and responsibilities are divided among members. Team members understand their individual roles and communicate regularly through discord, GitHub issues, pull requests. We are working toward a shared goal and supporting each other when problems arise, the person with more knowlage Gabriel has taken a larger technical responsibility and often supports other members with design decisions and problem solving. The main obstacles to reaching the Performing state are final integration of all features and ensuring that the webhook reliably triggers the full pipeline. Once these are done and consistently working, everything should be working. 
