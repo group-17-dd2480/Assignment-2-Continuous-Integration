@@ -36,6 +36,13 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         // 1st clone your repository
         // 2nd compile the code
 
+        // continuous integration tasks
+        // todo: check in which branch push happened, check commit message to avoid recursion
+        // todo: clone that branch to local
+        // done: compile the code
+        // todo: push to branch, add unique commit message to avoid recursion
+        // todo: delete local clone
+
         List<String> compileCommands = List.of("mvn", "clean", "compile");
         Path sourceDir = FileSystems.getDefault().getPath("");
         CiCompile ciCompile = new CiCompile(new MockCommandExecutorFactory(), compileCommands, sourceDir);// todo change to real program, instead of mockcommand
