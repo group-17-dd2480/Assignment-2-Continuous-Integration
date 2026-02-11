@@ -87,11 +87,11 @@ The server will start at: http://localhost:8080
 
 ## Statement of Contributions
 
-* **Olivia:** Implemented GitHub commit status notification (P3), integrated the notifier with the main server, handled debugging, and wrote the documentation.
-* **Member A:** Implemented the compilation pipeline (P1) and associated unit tests.
-* **Member B:** Implemented the testing pipeline (P2) and associated unit tests.
-* **Member C:** Implemented the Git service (cloning/checkout) and webhook payload parsing.
-* **Member D:** Assisted with testing, refactoring code structure, and overall documentation.
+* **Olivia:** Implemented GitHub commit status notification P3 and wrote the documentation.
+* **Laasya:** 
+* **Gabriel:**
+* **Daniel:**
+* **Sophia:**
 
 ## License
 
