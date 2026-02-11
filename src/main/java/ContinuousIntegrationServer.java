@@ -6,6 +6,8 @@ import javax.servlet.ServletException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.List;
@@ -26,12 +28,10 @@ import ci.*;
  */
 public class ContinuousIntegrationServer extends AbstractHandler {
 
-    // "url": "https://api.github.com/users/group-17-dd2480",
-    Pattern urlRegEx = Pattern.compile("(?:%22url%22:%22)(.*?)%22");
-    // "ref": "refs/heads/13-p1-(sub-2)-server-pulls-code-from-GitHub",
-    Pattern branchRegEx = Pattern.compile("(?:%22ref%22:%22refs%2fheads%2f)(.*?)%22");
-    // "after": "c2679413db5317a3b88bcfd1124fc5a5dc0592db",
-    Pattern shaRegEx = Pattern.compile("(?:%22after%22:%22)(.*?)%22");
+    // OLD: regex-based payload parsing (kept for reference)
+    // Pattern urlRegEx = Pattern.compile("(?:%22url%22:%22)(.*?)%22");
+    // Pattern branchRegEx = Pattern.compile("(?:%22ref%22:%22refs%2fheads%2f)(.*?)%22");
+    // Pattern shaRegEx = Pattern.compile("(?:%22after%22:%22)(.*?)%22");
 
     public void handle(String target,
             Request baseRequest,
@@ -54,13 +54,21 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         }
         System.out.println(payload.toString());
 
+        // decode webhook payload, supports www-form-urlencoded.
+        String rawBody = payload.toString();
+        String jsonBody;
+        String encoded = rawBody.startsWith("payload=") ? rawBody.substring("payload=".length()) : rawBody;
+        jsonBody = URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+
+        GitHubWebhookPayload hook = new GitHubWebhookPayload(jsonBody);
+        String owner = hook.getLogin();
+        String repo = hook.getRepositoryName();
+        String sha = hook.getAfter();
+        String branch = hook.getBranch();
+        String cloneUrl = hook.getCloneUrl();
+
         try {
             Notifier notifier = NotifierFactory.create();
-
-            String owner = "group-17-dd2480";
-            String repo = "Assignment-2-Continuous-Integration";
-            String sha = "c4f4b9e22d33d5de33339cb91cd21c1a0d007bdb";
-
             boolean ok = true;
 
             notifier.setStatus(
@@ -96,28 +104,8 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         try {
             // initiate clone object
             CiClone ciClone = new CiClone();
-            String url, branch, sha;
-            Matcher regExMatcher = urlRegEx.matcher(payload.toString());
-            if (regExMatcher.find()) {
-                url = regExMatcher.group(1);
-            } else {
-                throw new Exception("url is null");
-            }
-            regExMatcher = branchRegEx.matcher(payload.toString());
-            if (regExMatcher.find()) {
-                branch = regExMatcher.group(1);
-            } else {
-                throw new Exception("branch is null");
-            }
-            regExMatcher = shaRegEx.matcher(payload.toString());
-            if (regExMatcher.find()) {
-                sha = regExMatcher.group(1);
-            } else {
-                throw new Exception("sha is null");
-            }
-
             // clone the code to local
-            CiClone.CloneResult cloneResult = ciClone.gitCloneAndCheckout(url, branch, sha);
+            CiClone.CloneResult cloneResult = ciClone.gitCloneAndCheckout(cloneUrl, branch, sha);
             // handle clone failure
             if (!cloneResult.isSuccess()) {
                 throw new Exception("git clone/checkout failed: " + cloneResult.getOutput());
