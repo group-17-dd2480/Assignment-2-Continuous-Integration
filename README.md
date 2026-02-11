@@ -140,11 +140,29 @@ To see what data is sent\
 
 ## Statement of Contributions
 
-* **Olivia:** Implemented GitHub commit status notification P3 and wrote the documentation.
-* **Laasya:** 
-* **Gabriel:**
-* **Daniel:**
-* **Sofia:**
+**Olivia:**
+- Implemented GitHub commit status notification P3
+- Wrote the documentation.
+- GithubNotifier
+
+**Laasya:** 
+
+**Gabriel:**
+- Environment setup (mvn, junit) & project structure initialization
+- Build pipeline
+- Test pipeline
+- Javadoc
+- Docs
+
+**Daniel:**
+- Webhook parsing + tests
+- Repo cloning
+- Notification
+- Ci integration
+
+**Sofia:**
+- Documentation
+- Refactoring
 
 ## SEMAT
 Our team is currently in the Collaborating state. The mission of building  the CI server is defined, and responsibilities are divided among members. Team members understand their individual roles and communicate regularly through discord, GitHub issues, pull requests. We are working toward a shared goal and supporting each other when problems arise, the person with more knowlage Gabriel has taken a larger technical responsibility and often supports other members with design decisions and problem solving. The main obstacles to reaching the Performing state are final integration of all features and ensuring that the webhook reliably triggers the full pipeline. Once these are done and consistently working, everything should be working. 
