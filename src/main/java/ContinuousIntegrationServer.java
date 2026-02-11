@@ -1,4 +1,3 @@
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -31,8 +30,7 @@ import ci.GitHubWebhookPayload;
  * compiling the code, running tests, and notifying GitHub of the results.
  */
 public class ContinuousIntegrationServer extends AbstractHandler {
-    
-    
+    // Initialize build history at "ci-build-history" directory
     private final BuildHistory history;
     public ContinuousIntegrationServer() throws IOException {
         history = new BuildHistory(Path.of("ci-build-history"));
@@ -47,7 +45,6 @@ public class ContinuousIntegrationServer extends AbstractHandler {
      * @param request     The request object (HttpServletRequest).
      * @param response    The response object (HttpServletResponse).
      * @throws IOException      If an input or output exception occurs.
-     * @throws ServletException If a servlet exception occurs.
      */
     public void handle(String target,
             Request baseRequest,
@@ -59,7 +56,7 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         baseRequest.setHandled(true);
 
         System.out.println(target);
-
+        
         //display build list or single build based on the target URL
         if (target.equals("/builds")) {
             showBuildList(response);
@@ -68,7 +65,7 @@ public class ContinuousIntegrationServer extends AbstractHandler {
             showSingleBuild(target, response);
             return;
             }
-
+      
         // Read the webhook payload
         StringBuilder payloadBuilder = new StringBuilder();
         BufferedReader bufferedReader = request.getReader();
@@ -107,7 +104,6 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         String sha = webhook.getAfter();
         String branch = webhook.getBranch();
         String cloneUrl = webhook.getCloneUrl();
-        Boolean success = true;
 
         Notifier notifier = NotifierFactory.create();
         CiClone ciClone = new CiClone();
@@ -132,9 +128,9 @@ public class ContinuousIntegrationServer extends AbstractHandler {
             CiCompile.CompileResult compileResult = ciCompile.compile();
 
             if (!compileResult.isSuccess()) {
-                success = false;
-                history.createBuild(sha, "failure", compileResult.getOutput(), "Tests not run, compilation failed");
                 notifier.setStatus(owner, repo, sha, "failure", "Compilation failed");
+                //create build entry
+                history.createBuild(sha, "failure", compileResult.getOutput(), "Tests not run, compilation failed");
                 response.getWriter().println("Compilation failed: " + compileResult.getOutput());
                 return;
             }
@@ -145,9 +141,9 @@ public class ContinuousIntegrationServer extends AbstractHandler {
             CiTest.TestResult testResult = ciTest.runTests();
 
             if (!testResult.isSuccess()) {
-                success = false;
-                history.createBuild(sha, "failure", compileResult.getOutput(), testResult.getOutput());
                 notifier.setStatus(owner, repo, sha, "failure", "Tests failed");
+                //create build entry
+                history.createBuild(sha, "failure", compileResult.getOutput(), testResult.getOutput());
                 response.getWriter().println("Tests failed: " + testResult.getOutput());
                 return;
             }
@@ -155,6 +151,7 @@ public class ContinuousIntegrationServer extends AbstractHandler {
             // Set success status
             notifier.setStatus(owner, repo, sha, "success", "Build and tests passed");
             response.getWriter().println("Build successful, all tests passed :D");
+            //create build entry
             if(request.getMethod().equalsIgnoreCase("POST")) {
                 history.createBuild(sha, "success", compileResult.getOutput(), testResult.getOutput());
             }
@@ -203,3 +200,4 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         server.join();
     }
 }
+
