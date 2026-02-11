@@ -3,7 +3,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
 import java.io.IOException;
- 
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.util.List;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -33,6 +36,20 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         // 1st clone your repository
         // 2nd compile the code
 
+        List<String> compileCommands = List.of("mvn", "clean", "compile");
+        Path sourceDir = FileSystems.getDefault().getPath("");
+        CiCompile ciCompile = new CiCompile(new MockCommandExecutorFactory(), compileCommands, sourceDir);// todo change to real program, instead of mockcommand
+        try {
+            CiCompile.CompileResult result = ciCompile.compile();
+            if (result.isSuccess()) {
+                response.getWriter().println("Compilation successful<br><hr><p style=\"margin-left: 2em;\">");
+                response.getWriter().println(result.getOutput().replace("\n", "<br>"));
+                response.getWriter().println("</p><hr>");
+            }
+        } catch (IOException | InterruptedException e) {
+            response.getWriter().println("Exception in compilation: " + e + "<br>");
+        }
+
         response.getWriter().println("CI job done");
     }
 
@@ -42,5 +59,20 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         server.setHandler(new ContinuousIntegrationServer());
         server.start();
         server.join();
+    }
+}
+
+class SuccessFullMockCommandExecutor implements CommandExecutor {
+    @Override
+    public ExecResult execute(List<String> command, Path workDir) throws IOException, InterruptedException {
+        // we just return a successful result with some dummy output.
+        return new ExecResult(0, "The program output");
+    }
+}
+
+class MockCommandExecutorFactory implements CommandExecutorFactory {
+    @Override
+    public CommandExecutor create() {
+        return new SuccessFullMockCommandExecutor();
     }
 }
