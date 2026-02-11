@@ -94,7 +94,8 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         // todo: delete local clone
 
         try {
-            GitService gitService = new GitService();
+            // initiate clone object
+            CiClone ciClone = new CiClone();
             String url, branch, sha;
             Matcher regExMatcher = urlRegEx.matcher(payload.toString());
             if (regExMatcher.find()) {
@@ -115,17 +116,26 @@ public class ContinuousIntegrationServer extends AbstractHandler {
                 throw new Exception("sha is null");
             }
 
-            Path cloneLocation = gitService.gitCloneAndCheckout(url, branch, sha);
+            // clone the code to local
+            CiClone.CloneResult cloneResult = ciClone.gitCloneAndCheckout(url, branch, sha);
+            // handle clone failure
+            if (!cloneResult.isSuccess()) {
+                throw new Exception("git clone/checkout failed: " + cloneResult.getOutput());
+            }
+            Path cloneLocation = cloneResult.getClonedDirectory();
 
             List<String> compileCommands = List.of("mvn", "clean", "compile");
+            // initiate compile object and compile the code
             CiCompile ciCompile = new CiCompile(new DefaultCommandExecutorFactory(), compileCommands, cloneLocation);
+            // capture results
             CiCompile.CompileResult result = ciCompile.compile();
             if (result.isSuccess()) {
                 response.getWriter().println("Compilation successful<br><hr><p style=\"margin-left: 2em;\">");
                 response.getWriter().println(result.getOutput().replace("\n", "<br>"));
                 response.getWriter().println("</p><hr>");
             }
-            gitService.cleanup(cloneLocation);
+            // Always clean up the cloned directory to avoid accumulating temp data.
+            ciClone.cleanup(cloneLocation);
         } catch (Exception e) {
             response.getWriter().println("Exception in compilation: " + e + "<br>");
         }
