@@ -83,8 +83,9 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         // 2nd compile the code
 
         // continuous integration tasks
-        // done: check in which branch push happened
+        // done: start on push
         // todo: check commit message to avoid recursion
+        // todo: extract url etc from payload
         // done: clone that branch to local
         // done: compile the code
         // todo: push to branch, add unique commit message to avoid recursion
