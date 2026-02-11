@@ -1,3 +1,5 @@
+import ci.Notifier;
+import ci.NotifierFactory;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
@@ -53,20 +55,20 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         System.out.println(payload.toString());
 
         try {
-            String token = System.getenv("GITHUB_TOKEN");
-
-            GithubStatusNotifier notifier = new GithubStatusNotifier(token);
+            Notifier notifier = NotifierFactory.create();
 
             String owner = "group-17-dd2480";
             String repo = "Assignment-2-Continuous-Integration";
             String sha = "c4f4b9e22d33d5de33339cb91cd21c1a0d007bdb";
 
+            boolean ok = true;
+
             notifier.setStatus(
                     owner,
                     repo,
                     sha,
-                    "success",
-                    "P3: status set from CI server");
+                    ok ? "success" : "failure",
+                    ok ? "Build & tests passed" : "Build or tests failed");
 
             System.out.println("GitHub status sent for " + sha);
             response.getWriter().println("GitHub status sent<br>");
