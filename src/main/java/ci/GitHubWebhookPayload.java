@@ -3,7 +3,9 @@ package ci;
 import org.json.JSONObject;
 
 /**
- * Parses GitHub webhook push event payloads.
+ * Parses GitHub webhook push event payloads. 
+ * Takes a json string, extracts URL (where to clone), Branch (what to check out) and SHA which commit ID
+ * It parses the raw JSON into java objects to use
  */
 public class GitHubWebhookPayload {
     private final String ref;
