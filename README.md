@@ -109,6 +109,14 @@ java -cp "target/classes:target/dependency/*" ContinuousIntegrationServer
 ```
 The server will start at: http://localhost:8080
 
+## Generate Javadoc
+To generate the API documentation, run:
+```bash
+mvn javadoc:javadoc
+```
+The generated HTML can be found at:
+`target/reports/apidocs/index.html`
+
 Install ngrok:\
 Windows:\
 [ms-windows-store://pdp/?ProductId=9mvs1j51gmk6](ms-windows-store://pdp/?ProductId=9mvs1j51gmk6)\
