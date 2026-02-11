@@ -2,10 +2,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
@@ -20,6 +23,14 @@ import ci.*;
  * See the Jetty documentation for API documentation of those classes.
  */
 public class ContinuousIntegrationServer extends AbstractHandler {
+
+    // "url": "https://api.github.com/users/group-17-dd2480",
+    Pattern urlRegEx = Pattern.compile("(?:%22url%22:%22)(.*?)%22");
+    // "ref": "refs/heads/13-p1-(sub-2)-server-pulls-code-from-GitHub",
+    Pattern branchRegEx = Pattern.compile("(?:%22ref%22:%22refs%2fheads%2f)(.*?)%22");
+    // "after": "c2679413db5317a3b88bcfd1124fc5a5dc0592db",
+    Pattern shaRegEx = Pattern.compile("(?:%22after%22:%22)(.*?)%22");
+
     public void handle(String target,
             Request baseRequest,
             HttpServletRequest request,
@@ -30,30 +41,41 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         baseRequest.setHandled(true);
 
         System.out.println(target);
+
+        StringBuilder payload = new StringBuilder();
+
+        BufferedReader reader = request.getReader();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            payload.append(line);
+        }
+        System.out.println(payload.toString());
+
         try {
             String token = System.getenv("GITHUB_TOKEN");
 
-            GithubStatusNotifier notifier =
-                    new GithubStatusNotifier(token);
+            GithubStatusNotifier notifier = new GithubStatusNotifier(token);
 
             String owner = "group-17-dd2480";
-            String repo  = "Assignment-2-Continuous-Integration";
-            String sha   = "c4f4b9e22d33d5de33339cb91cd21c1a0d007bdb";
+            String repo = "Assignment-2-Continuous-Integration";
+            String sha = "c4f4b9e22d33d5de33339cb91cd21c1a0d007bdb";
 
             notifier.setStatus(
                     owner,
                     repo,
                     sha,
                     "success",
-                    "P3: status set from CI server"
-            );
+                    "P3: status set from CI server");
 
             System.out.println("GitHub status sent for " + sha);
+            response.getWriter().println("GitHub status sent<br>");
 
         } catch (Exception e) {
             System.err.println("Failed to send GitHub status");
             e.printStackTrace();
-        }       
+            response.getWriter().println("Failed to send GitHub status: " + e + "<br>");
+        }
 
         // here you do all the continuous integration tasks
         // for example
@@ -61,23 +83,47 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         // 2nd compile the code
 
         // continuous integration tasks
-        // todo: check in which branch push happened, check commit message to avoid recursion
-        // todo: clone that branch to local
+        // done: check in which branch push happened
+        // todo: check commit message to avoid recursion
+        // done: clone that branch to local
         // done: compile the code
         // todo: push to branch, add unique commit message to avoid recursion
         // todo: delete local clone
 
-        List<String> compileCommands = List.of("mvn", "clean", "compile");
-        Path sourceDir = FileSystems.getDefault().getPath("");
-        CiCompile ciCompile = new CiCompile(new MockCommandExecutorFactory(), compileCommands, sourceDir);// todo change to real program, instead of mockcommand
         try {
+            GitService gitService = new GitService();
+            String url, branch, sha;
+            Matcher regExMatcher = urlRegEx.matcher(payload.toString());
+            if (regExMatcher.find()) {
+                url = regExMatcher.group(1);
+            } else {
+                throw new Exception("url is null");
+            }
+            regExMatcher = branchRegEx.matcher(payload.toString());
+            if (regExMatcher.find()) {
+                branch = regExMatcher.group(1);
+            } else {
+                throw new Exception("branch is null");
+            }
+            regExMatcher = shaRegEx.matcher(payload.toString());
+            if (regExMatcher.find()) {
+                sha = regExMatcher.group(1);
+            } else {
+                throw new Exception("sha is null");
+            }
+
+            Path cloneLocation = gitService.gitCloneAndCheckout(url, branch, sha);
+
+            List<String> compileCommands = List.of("mvn", "clean", "compile");
+            CiCompile ciCompile = new CiCompile(new DefaultCommandExecutorFactory(), compileCommands, cloneLocation);
             CiCompile.CompileResult result = ciCompile.compile();
             if (result.isSuccess()) {
                 response.getWriter().println("Compilation successful<br><hr><p style=\"margin-left: 2em;\">");
                 response.getWriter().println(result.getOutput().replace("\n", "<br>"));
                 response.getWriter().println("</p><hr>");
             }
-        } catch (IOException | InterruptedException e) {
+            gitService.cleanup(cloneLocation);
+        } catch (Exception e) {
             response.getWriter().println("Exception in compilation: " + e + "<br>");
         }
 
