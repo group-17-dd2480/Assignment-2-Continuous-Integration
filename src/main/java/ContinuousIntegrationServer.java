@@ -14,6 +14,7 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
+import ci.BuildHistory;
 import ci.CiClone;
 import ci.CiCompile;
 import ci.CiTest;
@@ -29,6 +30,12 @@ import ci.GitHubWebhookPayload;
  * compiling the code, running tests, and notifying GitHub of the results.
  */
 public class ContinuousIntegrationServer extends AbstractHandler {
+    // Initialize build history at "ci-build-history" directory
+    private final BuildHistory history;
+    public ContinuousIntegrationServer() throws IOException {
+        history = new BuildHistory(Path.of("ci-build-history"));
+    }
+		
     /**
      * Handle HTTP requests from GitHub
      * This method parses the JSON payload to extract commit information, triggers the
@@ -49,7 +56,16 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         baseRequest.setHandled(true);
 
         System.out.println(target);
-
+        
+        //display build list or single build based on the target URL
+        if (target.equals("/builds")) {
+            showBuildList(response);
+            return;
+        } else if (target.startsWith("/builds/")) {
+            showSingleBuild(target, response);
+            return;
+            }
+      
         // Read the webhook payload
         StringBuilder payloadBuilder = new StringBuilder();
         BufferedReader bufferedReader = request.getReader();
@@ -113,6 +129,8 @@ public class ContinuousIntegrationServer extends AbstractHandler {
 
             if (!compileResult.isSuccess()) {
                 notifier.setStatus(owner, repo, sha, "failure", "Compilation failed");
+                //create build entry
+                history.createBuild(sha, "failure", compileResult.getOutput(), "Tests not run, compilation failed");
                 response.getWriter().println("Compilation failed: " + compileResult.getOutput());
                 return;
             }
@@ -124,6 +142,8 @@ public class ContinuousIntegrationServer extends AbstractHandler {
 
             if (!testResult.isSuccess()) {
                 notifier.setStatus(owner, repo, sha, "failure", "Tests failed");
+                //create build entry
+                history.createBuild(sha, "failure", compileResult.getOutput(), testResult.getOutput());
                 response.getWriter().println("Tests failed: " + testResult.getOutput());
                 return;
             }
@@ -131,6 +151,11 @@ public class ContinuousIntegrationServer extends AbstractHandler {
             // Set success status
             notifier.setStatus(owner, repo, sha, "success", "Build and tests passed");
             response.getWriter().println("Build successful, all tests passed :D");
+            //create build entry
+            if(request.getMethod().equalsIgnoreCase("POST")) {
+                history.createBuild(sha, "success", compileResult.getOutput(), testResult.getOutput());
+            }
+
 
         } catch (Exception e) {
             System.err.println("Failed to send GitHub status");
@@ -148,6 +173,21 @@ public class ContinuousIntegrationServer extends AbstractHandler {
             }
         }
     }
+
+    private void showBuildList(HttpServletResponse response) throws IOException {
+        response.getWriter().println("<h1>Builds</h1>");
+        for (String build : history.listBuilds()) {
+            response.getWriter().println(
+                "<a href=\"/builds/" + build + "\">" + build + "</a><br>");
+        }
+    }
+
+    private void showSingleBuild(String target, HttpServletResponse response) throws IOException {
+            String buildId = target.substring("/builds/".length());
+            response.getWriter().println("<pre>");
+            response.getWriter().println(history.getBuild(buildId));
+            response.getWriter().println("</pre>");
+        }
 
     /**
      * Begin the JEtty server on port 8080.
