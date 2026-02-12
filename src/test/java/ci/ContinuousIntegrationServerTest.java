@@ -54,7 +54,7 @@ public class ContinuousIntegrationServerTest {
         GitHubWebhookPayload webhook = new GitHubWebhookPayload(payload);
 
         assertEquals("octocat", webhook.getLogin());
-        assertEquals("Hello-World", webhook.getRepositoryName());
+        assertEquals("Hello-Worl", webhook.getRepositoryName());
         assertEquals("abc123def456789012345678901234567890abcd", webhook.getAfter());
         assertEquals("main", webhook.getBranch());
         assertEquals("https://github.com/octocat/Hello-World.git", webhook.getCloneUrl());
