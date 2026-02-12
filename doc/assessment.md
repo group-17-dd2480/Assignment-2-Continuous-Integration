@@ -1,4 +1,4 @@
-## Mandatory Tasks – Quick Assessment Table
+## Mandatory Tasks Overview – Quick Assessment Table
 
 | Task | Property | Achieved (✅ or ❌) | Optional Comment |
 |-----:|----------|-------------|------------------|
