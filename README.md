@@ -10,7 +10,7 @@ This project implements a minimal Continuous Integration (CI) server that:
 1.  **Receives** GitHub webhook events (HTTP POST).
 2.  **Clones** and checks out the specific branch and commit.
 3.  **Compiles** the project code (P1).
-4.  **Executes** automated tests (P2).
+4.  **Executes** automated tests (P2)
 5.  **Notifies** GitHub of the results via commit status (P3).
 
 ### Skeleton Reference
