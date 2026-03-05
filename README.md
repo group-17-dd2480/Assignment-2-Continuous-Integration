@@ -185,5 +185,3 @@ Our team is currently in the Collaborating state. The mission of building  the C
 ## License
 
 This project is licensed under the **MIT License**
-
-## Start the webhook server
